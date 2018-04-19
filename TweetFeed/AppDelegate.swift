@@ -9,13 +9,28 @@
 import UIKit
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, LoginViewControllerDelegate {
+    
 
     var window: UIWindow?
-
-
+    var loginViewController = LoginViewController()
+    var tabBarController = UITabBarController()
+    
+    var tweetFeedNavigationController = UINavigationController()
+    var settingsNavigationController = UINavigationController()
+    var searchNavigationController = UINavigationController()
+    
+    var tweetFeedViewController = TweetFeedViewController()
+    var settingsViewController = SettingsViewController()
+    var userSearchViewController = UserSearchViewController()
+    
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplicationLaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        NotificationCenter.default.addObserver(self, selector: #selector(handleUserSignOut(_:)), name: NotificationConstants.userSignedOut, object: nil)
+        setupContainerTabBarAndNavigationControllers()
+        loginViewController.delegate = self
+        window = UIWindow(frame: UIScreen.main.bounds)
+        window?.rootViewController = (TweetFeedUserCredentials().accessToken() != "") ? tabBarController : loginViewController
+        window?.makeKeyAndVisible()
         return true
     }
 
@@ -41,6 +56,42 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
     }
 
+    func application(_ app: UIApplication, open url: URL, options: [UIApplicationOpenURLOptionsKey : Any] = [:]) -> Bool {
+        guard let sourceApplication = options[UIApplicationOpenURLOptionsKey.sourceApplication] as? String else { return false }
+        guard sourceApplication == "com.apple.SafariViewService" else { return false }
+        guard let urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return false }
+        let authenticationModel = AuthenticationCredentialsModel(urlComponents.query ?? "")
+        NotificationCenter.default.post(name: NotificationConstants.twitterAuthRedirect, object: nil, userInfo: [OAuthConstants.tokenKey : authenticationModel])
+        return true
+    }
+    
+    func loginViewControllerAuthenticatedUser() {
+        if !(window?.rootViewController is UITabBarController) {
+            tabBarController.selectedIndex = 0
+            window?.rootViewController = tabBarController
+        }
+    }
 
+    @objc private func handleUserSignOut(_ notification: Notification) {
+        if !(window?.rootViewController is LoginViewController) {
+            window?.rootViewController = loginViewController
+            loginViewController.resetSession()
+        }
+    }
+    
+    private func setupContainerTabBarAndNavigationControllers() {
+        tweetFeedNavigationController = UINavigationController(rootViewController: tweetFeedViewController)
+        settingsNavigationController = UINavigationController(rootViewController: settingsViewController)
+        searchNavigationController = UINavigationController(rootViewController: userSearchViewController)
+        tabBarController.viewControllers = [tweetFeedNavigationController, searchNavigationController, settingsNavigationController]
+        TweetFeedStyle.styleTabBar(tabBarController.tabBar)
+        settingsViewController.tabBarItem = TabBarItemFactory.makeTabBarItem(title: "", selectedImage: TweetFeedImages.settingsTabBarSelectedImage, unselectedImage: TweetFeedImages.settingsTabBarUnselectedImage)
+        tweetFeedViewController.tabBarItem = TabBarItemFactory.makeTabBarItem(title: "", selectedImage: TweetFeedImages.feedTabBarSelectedImage, unselectedImage: TweetFeedImages.feedTabBarUnselectedImage)
+        userSearchViewController.tabBarItem = TabBarItemFactory.makeTabBarItem(title: "", selectedImage: TweetFeedImages.peopleSearchTabBarSelectedImage, unselectedImage: TweetFeedImages.peopleSearchTabBarUnselectedImage)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
 }
 

@@ -1,0 +1,43 @@
+TweetFeed App
+
+
+THINGS TO NOTE BEFORE LAUNCHING APP
+-----------------------------------
+The TweetFeed app is a universal app and should run on iPad and iPhone. It is targeted for > iOS 11 only so you will need the latest OS to ensure a smooth installation and build. The first time you login the OAuth redirect from Twitter may take some time. I have a small free heroku app server instance running the redirect from Twitter's https callback URL to the TweetFeed app's custom URL scheme. Please be patient here it can take up to 5 seconds but after the first redirect it runs much faster on subsequent login attempts. On this note, I have implemented a log in/out functionality to test signing in to other twitter accounts. If you would like to use this functionality after logging out please go to your Safari Settings and clear your website data (Safari caches your session for a while, a WebView would have been better here.)
+
+
+APPLICATION SECURITY MODEL
+---------------------------
+The general security model I used in the application was to store all sensitive data sent from the server in iOS's Keychain.
+The central object is TweetFeedCredentials, its really a Proxy layer for the iOS Keychain. In this light anytime you set sensitive credentials or query sensitive credentials from this object its actually fetching it from the keychain. No sensitive data is stored in clear text or in memory for lengthy period. There is one caveat to this, the Client Secret is stored in PlainText because it is needed to sign the first request you will ever make to the RequestToken Endpoint. This is not secure and in a real-world scenario you would have an Auth Gateway server sending you the registered Client Secret over Transport Layer Security. The Auth Gateway server could also serve as a more secure redirect point, instead of registering a custom URL redirect scheme to be pinged back on and redirecting to that custom URL, the Auth gateway server could store the access token and have an HTTP based endpoint you hit to fetch it after directly authenticating with Twitter. There is a lot more here and I would like to discuss this further and in deptch if given a chance to come onsite at Apple.  
+
+
+APPLICATION ARCHITECTURE AND DESIGN
+-----------------------------------
+The general architecture I used in the application was MVC. To keep my ViewController's light I tried to keep them as dumb as possible. I created service objects for anything HTTP and Twitter API related and any complex state logic I also broke out from my VC's. In this light, if you look at LoginViewController there is a good example of that. I encapsulated the entire authentication business logic and flow into its own AuthenticationManager with a clean delegate. This way if we ever wanted to build a new Login ViewController or experience it becomes plug and play, the business logic can be reused. As the app scales I would consider breaking down the DataModel objects into further sub objects (Twitter's User and Tweet objects are rather massive JSON blobs). 
+
+The Feed is architected as a bounded im-memory window into the backend timeline, and it is a "sliding window". Its a sliding window because as you scroll down data is removed from the top of the window and filled into the bottom and as you scroll up data is filled in at the top and removed from the bottom. In this sense it behaves like a DoubleEndedQueue and in-code you will see that is exactly the data structure I used. I did it this way because it keeps things rather simple and I saw anything persistence based as largely overkill for the current app requirements (or nice to haves). A disk based persistence layer could be easily incorporated. 
+
+Furthermore, I would follow a Model-View-ViewModel pattern to further abstract my views down the line. I did not see these as necessary architectural patterns to follow now and I stuck to traditional MVC since its clean enough and helps scale fast. The lower level HTTP layer is full of builders and factories aimed at grouping together common code and making the Request building experience simple/clean. I also employ caching, throttling, and async observer management to keep the UX smooth while keeping the application's network request overhead to a minimum. These can be observed in the ImageRequestManager and Debouncer objects.
+
+
+FUNCTIONALITY I WOULD HAVE LIKED TO ADD, HOW WOULD I HAVE DONE IT?
+------------------------------------------------------------------
+1. Supporting Tweet Media (Tweet Images, etc.)
+	- To support Images on a tweet I could easily levarage my ImageRequestManager for downloading of image content and caching. Twitter allows you to specify sizes to fetch for images so I could keep my imageView size height fixed on the scrollView which would help maintain the scrolling performance. We could start with a placeholder image, and fade in the post image when our async download completes. I am not sure if Twitter supports the following but if they have lower resolution quality images, we could fetch those images first as we download the initial timeline and the lower quality image could be our placeholder image. Then we can execute a request for the higher quality image and fade that in when it arrives, this would improve the UX further. When going through this exercise we should carefully bench mark each decision and see what is needed and what is not, the twitter API is remarkably fast so we should be careful not to be making premature optimizations. 
+
+	In this model we are still keeping everything in memory in a NSCache so we may get into memory critical situations as we scale the app and build more features. To handle this we can create a "bounded" cache just like our sliding window feed, currently my ImageRequestManager just clears the cache if it sees memory pressure. We can also write images to disk before caching them, then if we ever purge the cache atleast the image is on disk. This will come with its own set of challenges. How rich are the tweet images, do we need to compress and decompress them? How will this impact the scrolling performance when we fetch a compressed image from disk and have to decompress it? These are all challenges that can be addressed and I would love to chat further about in person if given an opportunity (I have yet to talk about video).
+
+2. I would have loved to support more attributes on the tweet itself like hash tags, retweets, etc. To support this the twitter API already  preprocess the text and calls out where all the special string attributes are. With coding up a couple more model attributes and doing some string processing and then implementing some attributed string magic on the labels this could have been easily achieved.
+
+3. Persisting the Feed would improve the UX since the twitter feed api does not always return data on-demand. In this scenario serializing the most recent 200 tweets in memory on disk would provide users with some feed to interact with instead of an empty canvas in this particular scenario.
+
+
+WHY AUTO-LAYOUT?
+-----------------
+My decision to use auto-layout stems from the fact that I personally think its a great "mental model" when dealing with layout and with layout anchors its pretty fast to hack together layouts. It almost always leads to more adaptive layouts right out of the box when compared to working with frames so I try to use it where I can. This all being said, its not black and white. One area I would closely monitor is the FeedViewController. With the current supported tweet attributes and design a pure auto layout approach worked reasonably well and gave reasonable scroll performance for the TweetFeed. As the feed card object gets more complex I would closely monitor this area and try to flatten the view heirarchy (and therefor constraint heirarchy) to simplify the math and/or switch to a more traditional layoutSubviews() approach if I saw fit. Once again time profiling, benchmarking is needed.
+
+
+CONCLUSION
+------------
+All in all this has been an extremely fun coding challenge and was a joy to work on. I may not have been able to support every single attribute the Feed Api provides but my goal with this app was to demonstrate I have a software solution that works and is easily scalable to address and handle the challenges that come ahead. Furthermore, I hope some of the challenges I currently solved demonstrate that I have the ability to solve what would lie ahead if we were to scale this app to production. Thank you for the challenge and taking the time to review what I have worked on. If you have made it all the way down here you are awesome! :)
