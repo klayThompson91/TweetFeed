@@ -10,6 +10,7 @@
 		82168AF22082EEEB00A53B7C /* HTTPURLResponseExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82168AF12082EEEB00A53B7C /* HTTPURLResponseExtensions.swift */; };
 		82168AF42082F23F00A53B7C /* AuthenticationCredentialsModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82168AF32082F23F00A53B7C /* AuthenticationCredentialsModel.swift */; };
 		82168AF7208304E800A53B7C /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82168AF6208304E800A53B7C /* Constants.swift */; };
+		821BD57B2095426400D10DEF /* TweetFeedCellSizingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 821BD57A2095426400D10DEF /* TweetFeedCellSizingAttributes.swift */; };
 		8242BA4D2083EF4200284C09 /* LoginViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8242BA4C2083EF4200284C09 /* LoginViewController.swift */; };
 		8242BA4F2083F63500284C09 /* UIViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8242BA4E2083F63500284C09 /* UIViewExtensions.swift */; };
 		8242BA5520844C2500284C09 /* CardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8242BA5420844C2500284C09 /* CardViews.swift */; };
@@ -76,6 +77,7 @@
 		82168AF12082EEEB00A53B7C /* HTTPURLResponseExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPURLResponseExtensions.swift; sourceTree = "<group>"; };
 		82168AF32082F23F00A53B7C /* AuthenticationCredentialsModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationCredentialsModel.swift; sourceTree = "<group>"; };
 		82168AF6208304E800A53B7C /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		821BD57A2095426400D10DEF /* TweetFeedCellSizingAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TweetFeedCellSizingAttributes.swift; sourceTree = "<group>"; };
 		8242BA4C2083EF4200284C09 /* LoginViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginViewController.swift; sourceTree = "<group>"; };
 		8242BA4E2083F63500284C09 /* UIViewExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIViewExtensions.swift; sourceTree = "<group>"; };
 		8242BA5420844C2500284C09 /* CardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardViews.swift; sourceTree = "<group>"; };
@@ -183,6 +185,7 @@
 				8287CABD20830CF9003848A8 /* AuthenticationManager.swift */,
 				82168AF32082F23F00A53B7C /* AuthenticationCredentialsModel.swift */,
 				82F24EE3208533B5006B3AD2 /* TweetModel.swift */,
+				821BD57A2095426400D10DEF /* TweetFeedCellSizingAttributes.swift */,
 				82A33D7E2086B52800E9452F /* UserModel.swift */,
 				82A33D802086B55100E9452F /* RelationshipModel.swift */,
 				82F24EE52085642C006B3AD2 /* BoundedDequeueArray.swift */,
@@ -512,6 +515,7 @@
 				82FD26A12086976A00C53014 /* UserSearchService.swift in Sources */,
 				8242BA5F2084657E00284C09 /* TweetFeedCardTableViewCell.swift in Sources */,
 				82F24EEC2085CB21006B3AD2 /* RelationshipService.swift in Sources */,
+				821BD57B2095426400D10DEF /* TweetFeedCellSizingAttributes.swift in Sources */,
 				82599F592081CF5100C3F97B /* PasswordKeychainItem.m in Sources */,
 				82FD269F2086910100C53014 /* TwitterUserHandleTableViewCell.swift in Sources */,
 				82F24EE62085642C006B3AD2 /* BoundedDequeueArray.swift in Sources */,

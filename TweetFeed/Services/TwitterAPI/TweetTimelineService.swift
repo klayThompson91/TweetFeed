@@ -33,9 +33,7 @@ public class TweetTimelineService {
         if let fetchTweetsRequest = buildTimelineRequest(idPair: idPair, count: count).request {
             let task = URLSession.shared.dataTask(with: fetchTweetsRequest, completionHandler: { [weak self] (data: Data?, response: URLResponse?, error: Error?) in
                 if let strongSelf = self {
-                    DispatchQueue.main.async {
-                        strongSelf.handleTimelineResponse(data: data, response: response, error: error, completionHandler: completionHandler)
-                    }
+                    strongSelf.handleTimelineResponse(data: data, response: response, error: error, completionHandler: completionHandler)
                 }
             })
             task.resume()
@@ -55,30 +53,42 @@ public class TweetTimelineService {
         return requestBuilder
     }
     
-    private func handleTimelineResponse(data: Data?, response: URLResponse?, error: Error?, completionHandler: TweetTimelineCompletionHandler) {
+    private func handleTimelineResponse(data: Data?, response: URLResponse?, error: Error?, completionHandler: @escaping TweetTimelineCompletionHandler) {
         guard error == nil else {
-            completionHandler([TweetModel](), error)
+            DispatchQueue.main.async {
+                completionHandler([TweetModel](), error)
+            }
             return
         }
         guard let response = response as? HTTPURLResponse, response.isSuccessfulStatusCode else {
-            completionHandler([TweetModel](), HTTPServiceErrors.unsuccessfulHTTPStatusCode)
+            DispatchQueue.main.async {
+                completionHandler([TweetModel](), HTTPServiceErrors.unsuccessfulHTTPStatusCode)
+            }
             return
         }
         guard response.isJSONMediaType else {
-            completionHandler([TweetModel](), HTTPServiceErrors.responseContainedIncorrectMediaType)
+            DispatchQueue.main.async {
+                completionHandler([TweetModel](), HTTPServiceErrors.responseContainedIncorrectMediaType)
+            }
             return
         }
         
         if let data = data {
             do {
                 if let tweetCollection = try JSONSerialization.jsonObject(with: data, options: []) as? [[String: Any]] {
-                    completionHandler(tweetCollection.map { TweetModel($0) }, nil)
+                    DispatchQueue.main.async {
+                        completionHandler(tweetCollection.map { TweetModel($0) }, nil)
+                    }
                 }
             } catch {
-                completionHandler([TweetModel](), HTTPServiceErrors.responseDeserializationFailed)
+                DispatchQueue.main.async {
+                    completionHandler([TweetModel](), HTTPServiceErrors.responseDeserializationFailed)
+                }
             }
         } else {
-            completionHandler([TweetModel](), HTTPServiceErrors.emptyResponseData)
+            DispatchQueue.main.async {
+                completionHandler([TweetModel](), HTTPServiceErrors.emptyResponseData)
+            }
         }
     }
 }

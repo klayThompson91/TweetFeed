@@ -17,11 +17,19 @@ public class TweetFeedCardTableViewCell: CardTableViewCell {
     public override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         contentView.addSubview(feedView)
-        setupConstraints()
+        //setupConstraints()
     }
     
     public required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        let contentRect = contentView.bounds
+        let width = contentRect.width - (kInsetPadding * 2)
+        let height = contentRect.height - (kInsetPadding * 2)
+        feedView.frame = CGRect(x: kInsetPadding, y: kInsetPadding, width: width, height: height)
     }
     
     private func setupConstraints() {
