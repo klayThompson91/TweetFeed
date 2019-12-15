@@ -26,14 +26,62 @@ public class TweetMessageView: UIView {
         return label
     }()
     
+    public var messageLabelHeight: CGFloat? {
+        didSet {
+            setNeedsLayout()
+        }
+    }
+    
+    public var subtitleLabelHeight: CGFloat? {
+        didSet {
+            setNeedsLayout()
+        }
+    }
+    
+    public var useAutoLayout: Bool = false {
+        didSet {
+            if useAutoLayout {
+                setupConstraints()
+            }
+        }
+    }
+    
     public override init(frame: CGRect) {
         super.init(frame: frame)
         addSubviews([messageLabel, subtitleLabel])
-        setupConstraints()
+        //setupConstraints()
     }
     
     public required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        if !useAutoLayout {
+            let contentRect = self.bounds
+            
+            var messageLabelFrameHeight: CGFloat = .leastNonzeroMagnitude
+            if let messageLabelHeight = messageLabelHeight {
+                messageLabelFrameHeight = messageLabelHeight
+            } else {
+                messageLabel.frame = CGRect(x: 0, y: 0, width: contentRect.size.width, height: .greatestFiniteMagnitude)
+                messageLabel.sizeToFit()
+                messageLabelFrameHeight = messageLabel.bounds.size.height
+            }
+            
+            var subtitleLabelFrameHeight: CGFloat = .leastNonzeroMagnitude
+            if let subtitleLabelHeight = subtitleLabelHeight {
+                subtitleLabelFrameHeight = subtitleLabelHeight
+            } else {
+                subtitleLabel.frame = CGRect(x: 0, y: 0, width: contentRect.size.width, height: .greatestFiniteMagnitude)
+                subtitleLabel.sizeToFit()
+                subtitleLabelFrameHeight = subtitleLabel.bounds.size.height
+            }
+            
+            messageLabel.frame = CGRect(x: 0, y: 0, width: contentRect.width, height: messageLabelFrameHeight)
+            subtitleLabel.frame = CGRect(x: 0, y: messageLabelFrameHeight, width: contentRect.width, height: subtitleLabelFrameHeight)
+        }
     }
     
     private func setupConstraints() {

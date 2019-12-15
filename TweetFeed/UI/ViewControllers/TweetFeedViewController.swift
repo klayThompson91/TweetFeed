@@ -22,9 +22,11 @@ public class TweetFeedViewController: UIViewController, UITableViewDataSource, U
     private var fetchingOldTweets: Bool = false
     private var reloadFeed: Bool = false
     
-    private var tweetFeed = BoundedDequeueArray<TweetModel>(count: 200)
+    private typealias TweetFeedItem = (tweetModel: TweetModel, tweetSizingAttributes: TweetFeedCellSizingAttributes)
+    private var tweetFeed = BoundedDequeueArray<TweetFeedItem>(count: 200)
     private var recentTweetsDebouncerThrottle = Debouncer(delay: 0.25)
-    private var pastTweetsDebouncerThrottle = Debouncer(delay: 0.10)
+    private var pastTweetsDebouncerThrottle = Debouncer(delay: 0.75)
+    private var sizingCell = TweetFeedCardTableViewCell(style: .default, reuseIdentifier: nil)
     
     private let tableView: UITableView = {
         var tweetFeedTableView = UITableView(frame: .zero, style: .grouped)
@@ -33,8 +35,6 @@ public class TweetFeedViewController: UIViewController, UITableViewDataSource, U
         tweetFeedTableView.tableHeaderView = UIView(frame: CGRect(x: 0.0, y: 0.0, width: 0.0, height: CGFloat.leastNormalMagnitude))
         tweetFeedTableView.sectionFooterHeight = 5.0
         tweetFeedTableView.sectionHeaderHeight = 5.0
-        tweetFeedTableView.estimatedRowHeight = 200
-        tweetFeedTableView.rowHeight = UITableViewAutomaticDimension
         tweetFeedTableView.register(TweetFeedCardTableViewCell.self, forCellReuseIdentifier: CellReuseIdentifiers.tweetFeedCardCell)
         tweetFeedTableView.register(UITableViewHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: CellReuseIdentifiers.blankHeaderFooterCell)
         return tweetFeedTableView
@@ -91,6 +91,10 @@ public class TweetFeedViewController: UIViewController, UITableViewDataSource, U
         return 1
     }
     
+    public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return tweetFeed.items[indexPath.section].tweetSizingAttributes.cellHeight
+    }
+    
     public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         var cell = TweetFeedCardTableViewCell(style: .default, reuseIdentifier: CellReuseIdentifiers.tweetFeedCardCell)
         if let dequeuedCell = tableView.dequeueReusableCell(withIdentifier: CellReuseIdentifiers.tweetFeedCardCell) as? TweetFeedCardTableViewCell {
@@ -98,12 +102,9 @@ public class TweetFeedViewController: UIViewController, UITableViewDataSource, U
         }
         
         let currentTweet = tweetFeed.items[indexPath.section]
-        cell.feedView.userHandleView.userHandleLabel.text = currentTweet.user?.twitterHandle ?? ""
-        cell.feedView.userHandleView.userNameLabel.text = currentTweet.user?.name ?? ""
-        cell.feedView.userHandleView.profileImageUri = currentTweet.user?.profileImageUri
-        cell.feedView.messageView.messageLabel.text = currentTweet.text ?? ""
-        cell.feedView.messageView.subtitleLabel.text = currentTweet.date ?? ""
-        cell.selectionStyle = .none
+        configureCell(cell, currentTweet.tweetModel)
+        cell.feedView.userHandleView.profileImageUri = currentTweet.tweetModel.user?.profileImageUri
+        applyCellSizingAttributes(cell, currentTweet.tweetSizingAttributes)
         return cell
     }
     
@@ -140,46 +141,75 @@ public class TweetFeedViewController: UIViewController, UITableViewDataSource, U
     private func loadInitialTweets() {
         self.tweetTimelineService.fetchTweets(count: kChunkSize * 2) { (tweets, error) in
             self.mainLoadingView.stopAnimating()
-            self.tweetFeed.insertFront(tweets)
+            self.tweetFeed.insertFront(self.tweetFeedItems(from: tweets))
             self.tableView.isHidden = false
             self.tableView.reloadData()
         }
     }
     
     private func loadMostRecentTweets() {
-        if let sinceId = tweetFeed.items.first?.id {
+        if let sinceId = tweetFeed.items.first?.tweetModel.id {
             fetchingRecentTweets = true
-            recentTweetsDebouncerThrottle.perform {
-                self.tweetTimelineService.fetchTweetsSince(id: sinceId, count: self.kChunkSize, completionHandler: { (tweets, error) in
-                    if error == nil && tweets.count > 0 {
-                        self.tweetFeed.insertFront(tweets)
-                        self.tableView.reloadData()
-                    }
-                    self.fetchingRecentTweets = false
-                })
+            recentTweetsDebouncerThrottle.perform { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.tweetTimelineService.fetchTweetsSince(id: sinceId, count: strongSelf.kChunkSize, completionHandler: { (tweets, error) in
+                        if error == nil && tweets.count > 0 {
+                            strongSelf.tweetFeed.insertFront(strongSelf.tweetFeedItems(from: tweets))
+                            strongSelf.tableView.reloadData()
+                        }
+                        strongSelf.fetchingRecentTweets = false
+                    })
+                }
             }
         }
     }
     
     private func loadPastTweets() {
-        if let maxId = tweetFeed.items.last?.id {
+        if let maxId = tweetFeed.items.last?.tweetModel.id {
             fetchingOldTweets = true
-            pastTweetsDebouncerThrottle.perform {
-                self.tweetTimelineService.fetchTweetsBefore(id: maxId, count: self.kChunkSize, completionHandler: { (tweets, error) in
-                    if error == nil && tweets.count > 0 {
-                        self.tweetFeed.insertBack(tweets)
-                        self.tableView.reloadData()
-                    }
-                    self.fetchingOldTweets = false
-                })
+            pastTweetsDebouncerThrottle.perform { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.tweetTimelineService.fetchTweetsBefore(id: maxId, count: strongSelf.kChunkSize, completionHandler: { (tweets, error) in
+                        if error == nil && tweets.count > 0 {
+                            strongSelf.tweetFeed.insertBack(strongSelf.tweetFeedItems(from: tweets))
+                            strongSelf.tableView.reloadData()
+                        }
+                        strongSelf.fetchingOldTweets = false
+                    })
+                }
             }
         }
+    }
+    
+    private func tweetFeedItems(from tweets: [TweetModel]) -> [TweetFeedItem] {
+        var sizeData = [TweetFeedItem]()
+        for tweet in tweets {
+            configureCell(sizingCell, tweet)
+            let cellSize = TweetFeedCellSizingAttributes(sizingCell: sizingCell, width: self.view.bounds.size.width)
+            sizeData.append((tweet, cellSize))
+        }
+        return sizeData
     }
     
     private func configureLoadingView(_ view: inout UIActivityIndicatorView) {
         view = UIActivityIndicatorView(activityIndicatorStyle: .gray)
         view.hidesWhenStopped = true
         view.center = self.view.center
+    }
+    
+    private func configureCell(_ cell: TweetFeedCardTableViewCell, _ currentTweet: TweetModel) {
+        cell.feedView.userHandleView.userHandleLabel.text = currentTweet.user?.twitterHandle ?? ""
+        cell.feedView.userHandleView.userNameLabel.text = currentTweet.user?.name ?? ""
+        cell.feedView.messageView.messageLabel.text = currentTweet.text ?? ""
+        cell.feedView.messageView.subtitleLabel.text = currentTweet.date ?? ""
+        cell.selectionStyle = .none
+    }
+    
+    private func applyCellSizingAttributes(_ cell: TweetFeedCardTableViewCell, _ sizingAttributes: TweetFeedCellSizingAttributes) {
+        cell.feedView.userHandleView.userHandleLabelHeight = sizingAttributes.userHandleLabelHeight
+        cell.feedView.userHandleView.userNameLabelHeight = sizingAttributes.userNameLabelHeight
+        cell.feedView.messageView.messageLabelHeight = sizingAttributes.tweetLabelHeight
+        cell.feedView.messageView.subtitleLabelHeight = sizingAttributes.tweetSubtitleLabelHeight
     }
     
     @objc private func handleUserSignOut(_ notification: Notification) {

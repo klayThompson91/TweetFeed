@@ -40,8 +40,10 @@ public class Debouncer {
     }
     
     @objc private func fireNow() {
-        callback?()
-        callback = nil
-        timer = nil
+        if timer != nil && callback != nil {
+            callback?()
+            callback = nil
+            timer = nil
+        }
     }
 }

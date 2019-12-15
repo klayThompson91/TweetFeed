@@ -54,6 +54,26 @@ public class TwitterUserHandleView: UIView {
         label.textColor = UIColor(red: 74/255, green: 74/255, blue: 74/255, alpha: 1.0)
         return label
     }()
+
+    public var userNameLabelHeight: CGFloat? {
+        didSet {
+            setNeedsLayout()
+        }
+    }
+    
+    public var userHandleLabelHeight: CGFloat? {
+        didSet {
+            setNeedsLayout()
+        }
+    }
+    
+    public var useAutoLayout: Bool = false {
+        didSet {
+            if useAutoLayout {
+                setupConstraints()
+            }
+        }
+    }
     
     public override var intrinsicContentSize: CGSize {
         return CGSize(width: UIViewNoIntrinsicMetric, height: kImageDiameter)
@@ -66,11 +86,41 @@ public class TwitterUserHandleView: UIView {
     public override init(frame: CGRect) {
         super.init(frame: frame)
         addSubviews([profileImageView, userNameLabel, userHandleLabel])
-        setupConstraints()
+        //setupConstraints()
     }
     
     public required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    public override func layoutSubviews() {
+        super.layoutSubviews()
+        if !useAutoLayout {
+            let containerRect = self.bounds
+            let offset = kImageDiameter + 10
+            profileImageView.frame = CGRect(x: 0, y: 0, width: kImageDiameter, height: kImageDiameter)
+            
+            var userNameLabelFrameHeight: CGFloat = .leastNonzeroMagnitude
+            if let userNameLabelHeight = userNameLabelHeight {
+                userNameLabelFrameHeight = userNameLabelHeight
+            } else {
+                userNameLabel.frame = CGRect(x: 0, y: 0, width: containerRect.width - offset, height: .greatestFiniteMagnitude)
+                userNameLabel.sizeToFit()
+                userNameLabelFrameHeight = userNameLabel.bounds.size.height
+            }
+            
+            var userHandleLabelFrameHeight: CGFloat = .leastNonzeroMagnitude
+            if let userHandleLabelHeight = userHandleLabelHeight {
+                userHandleLabelFrameHeight = userHandleLabelHeight
+            } else {
+                userHandleLabel.frame = CGRect(x: 0, y: 0, width: containerRect.width - offset, height: .greatestFiniteMagnitude)
+                userHandleLabel.sizeToFit()
+                userHandleLabelFrameHeight = userHandleLabel.bounds.height
+            }
+            
+            userNameLabel.frame = CGRect(x: offset, y: 0, width: containerRect.width - offset, height: userNameLabelFrameHeight)
+            userHandleLabel.frame = CGRect(x: offset, y: userNameLabelFrameHeight, width: containerRect.width - offset, height: userHandleLabelFrameHeight)
+        }
     }
     
     private func setupConstraints() {
